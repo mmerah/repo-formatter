@@ -1,0 +1,17 @@
+# .repo_formatter.yaml
+exclude_paths:
+  - build
+  - scripts
+  - data
+
+# Only include these file types
+include_extensions:
+  - .h
+  - .cpp
+  - .txt 
+
+# Anonymization rules (case-insensitive keys)
+anonymize:
+  Project: Confidential # Replace 'project', 'Project', 'PROJECT' with 'confidential', 'Confidential', 'CONFIDENTIAL'
+  MyOrg: SampleCompany  # Replace 'MyOrg' with 'SampleCompany'
+  Secret: Redacted

@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+*.egg-info/
+dist/
+build/
+*.so
+*.dll
+
+# VSCode
+.vscode/
+
+# Devcontainer cache
+.devcontainer/.cache/
+
+# Output file
+repository.md
+*.md # Maybe too broad? Be specific if needed:
+# diff_*.md
+# class_*.md
+
+# Sample project build files
+sample_project/build/
+
+# Other common ignores
+.DS_Store
+*.log
+*.swp
+*.swo

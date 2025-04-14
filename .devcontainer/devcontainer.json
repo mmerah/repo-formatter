@@ -1,0 +1,23 @@
+{
+    "name": "Repo Formatter Dev",
+    "image": "python:3.11-slim",
+	"features": {
+		"ghcr.io/devcontainers/features/git:1": {}
+	},
+	"postCreateCommand": "pip install --editable .[dev]", // Install the package itself in editable mode + dev deps
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"charliermarsh.ruff",
+				"esbenp.prettier-vscode"
+			],
+			"settings": {
+				"python.defaultInterpreterPath": "/usr/local/bin/python",
+				"python.testing.unittestEnabled": false,
+				"python.testing.pytestEnabled": true
+			}
+		}
+	}
+}
