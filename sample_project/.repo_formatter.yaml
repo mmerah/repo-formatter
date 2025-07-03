@@ -4,6 +4,11 @@ exclude_paths:
   - scripts
   - data
 
+# Force include specific files/paths even if they're in exclude_paths
+# Example: if you have "docs" in exclude_paths but want to include "docs/README.md"
+force_include:
+  - data/input.txt  # Force include this specific file even though data/ is excluded
+
 # Only include these file types
 include_extensions:
   - .h

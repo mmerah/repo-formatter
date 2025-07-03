@@ -15,7 +15,7 @@ A command-line tool to format repository content into a single Markdown file (`r
     *   `normal`: Process the entire repository (respecting filters).
     *   `class`: Include only files containing a specific class name.
     *   `patch`: Include a git diff instead of file contents.
-*   Estimates the token count of the generated Markdown.
+*   Estimates the token count of the generated Markdown using `tiktoken`.
 *   Configurable via a `.repo_formatter.yaml` file.
 
 ## Installation
@@ -25,7 +25,6 @@ A command-line tool to format repository content into a single Markdown file (`r
 ```bash
 pip install repo-formatter
 ```
-*(Optional: If you want more accurate token counts, install `tiktoken` as well: `pip install tiktoken`)*
 
 **From Source (for Development):**
 
@@ -85,7 +84,9 @@ repo-formatter --mode patch --diff-target develop..main
 Create a `.repo_formatter.yaml` file in the root of your repository (or specify with `-c`).
 
 ```yaml
-# List of directory or file names to exclude. Matches anywhere in the path.
+# Paths to exclude, relative to the repository root.
+# This matches the full path, so 'data' excludes the 'data' directory at the root,
+# and 'app/logs' excludes 'logs' inside 'app'.
 exclude_paths:
   - .git
   - .vscode
@@ -95,7 +96,12 @@ exclude_paths:
   - venv
   - __pycache__
   - specific_file_to_ignore.log
-  - vendor/ # Excludes any directory named vendor
+  - app/content # Excludes the 'content' directory inside 'app'
+
+# Force the inclusion of specific files or directories, even if they are in an excluded path.
+# This is useful for including a specific file from an otherwise excluded directory.
+force_include:
+  - docs/IMPORTANT.md # Include this file even if 'docs' is in exclude_paths.
 
 # List of file extensions to include (lowercase, including the dot).
 # If empty or omitted, all extensions (not excluded by path) are included.
@@ -139,10 +145,4 @@ repo-formatter sample_project --mode patch --diff-target current
 
 ## Token Estimation
 
-The tool provides a basic token estimation based on character count. For more accurate OpenAI-compatible counts, consider installing `tiktoken`:
-
-```bash
-pip install tiktoken
-```
-
-*(The code would need a slight modification to use `tiktoken` if installed - see comments in `token_estimator.py` and `main.py`)*.
+The tool uses the `tiktoken` library to provide accurate token counts for OpenAI models. The library is installed automatically as a dependency.

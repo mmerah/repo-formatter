@@ -22,30 +22,63 @@ def _should_skip(
     root_dir: Path,
     exclude_paths: List[str],
     include_extensions: List[str],
+    force_include: List[str] = None,
     class_name: Optional[str] = None,
     check_content: bool = False
 ) -> bool:
-    """Determines if a file or directory should be skipped."""
-    # Check against exclude_paths (applies to files and dirs)
+    """Determines if a file or directory should be skipped based on configuration."""
+    if force_include is None:
+        force_include = []
+
+    try:
+        relative_path_str = str(path.relative_to(root_dir))
+    except ValueError:
+        # The path is not within the root directory, which can happen with symlinks.
+        # We'll treat it as something to skip.
+        return True
+
+    # 1. Check for force inclusion
+    # If a path is explicitly force-included, we ignore subsequent exclusion rules.
+    is_force_included = False
+    for force in force_include:
+        if relative_path_str == force or relative_path_str.startswith(force + os.path.sep):
+            # It's a match or a child of a match. Don't skip based on rules.
+            # Still need to check for things like file size for files.
+            is_force_included = True
+            break
+    
+    if is_force_included:
+        if path.is_file():
+            # Still check for fundamental issues like size or accessibility
+            try:
+                if path.stat().st_size > MAX_FILE_SIZE_BYTES:
+                    print(f"Warning: Force-included file is too large: {path.relative_to(root_dir)}")
+                    return True
+            except OSError:
+                print(f"Warning: Could not access force-included file {path.relative_to(root_dir)}. Skipping.")
+                return True
+        return False  # Don't skip this item
+
+    # 2. Check for exclusion
+    is_excluded = False
     for exclude in exclude_paths:
-        try:
-            # Check if the path relative to root starts with or exactly matches exclude
-            relative_path_str = str(path.relative_to(root_dir))
-            # Check name directly (e.g., "node_modules")
-            if path.name == exclude:
-                 # print(f"Skipping {relative_path_str} (name match: {exclude})")
-                 return True
-            # Check if path starts with excluded dir (e.g., "src/vendor")
-            # Need to handle path separators carefully
-            # if relative_path_str.startswith(exclude + os.path.sep):
-            #      print(f"Skipping {relative_path_str} (prefix match: {exclude})")
-            #      return True
-        except ValueError: # path is not relative to root_dir (shouldn't happen with os.walk)
-             pass
-        # Check if any part of the path matches an excluded name
-        if exclude in path.parts:
-            # print(f"Skipping {path} (part match: {exclude})")
-            return True
+        # Check for exact match or if the path is inside an excluded directory
+        if relative_path_str == exclude or relative_path_str.startswith(exclude + os.path.sep):
+            is_excluded = True
+            break
+        # Also check just the name (e.g., 'node_modules')
+        if path.name == exclude:
+            is_excluded = True
+            break
+
+    if is_excluded:
+        # If it's an excluded path, we must still check if it's a parent of a force-included path.
+        # This prevents `os.walk` from skipping a directory like `data` if `data/input.txt` is forced.
+        if path.is_dir():
+            for force in force_include:
+                if force.startswith(relative_path_str + os.path.sep):
+                    return False  # Don't skip this directory, a child is force-included.
+        return True  # It's genuinely excluded.
 
 
     if path.is_file():
@@ -95,6 +128,7 @@ def format_repo_to_markdown(
     """
     root_path = Path(root_dir).resolve()
     exclude_paths = config.get('exclude_paths', [])
+    force_include = config.get('force_include', [])
     include_extensions = config.get('include_extensions', [])
     anonymize_rules = config.get('anonymize', {}) if anonymize_flag else {}
 
@@ -105,7 +139,7 @@ def format_repo_to_markdown(
 
     # 1. Generate Tree Structure
     print("Generating directory tree...")
-    tree_string = generate_tree_string(root_path, exclude_paths, include_extensions, anonymizer if anonymize_flag else None)
+    tree_string = generate_tree_string(root_path, exclude_paths, force_include, include_extensions, anonymizer if anonymize_flag else None)
     markdown_content.append("# Repository Structure")
     markdown_content.append("```")
     markdown_content.append(tree_string)
@@ -123,7 +157,7 @@ def format_repo_to_markdown(
         # Filter dirnames in-place to prevent descending into excluded directories
         # Important: Modify dirnames[:] to change the list os.walk uses
         original_dirnames = list(dirnames) # Copy for iteration
-        dirnames[:] = [d for d in original_dirnames if not _should_skip(current_path / d, root_path, exclude_paths, [])]
+        dirnames[:] = [d for d in original_dirnames if not _should_skip(current_path / d, root_path, exclude_paths, [], force_include)]
 
 
         for filename in filenames:
@@ -132,7 +166,7 @@ def format_repo_to_markdown(
             # Determine if we need to check content based on mode
             check_content_for_class = (class_name is not None)
 
-            if _should_skip(file_path, root_path, exclude_paths, include_extensions, class_name, check_content_for_class):
+            if _should_skip(file_path, root_path, exclude_paths, include_extensions, force_include, class_name, check_content_for_class):
                 continue
 
             relative_path = file_path.relative_to(root_path)

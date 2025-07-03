@@ -18,6 +18,7 @@ DEFAULT_CONFIG = {
         "env",
         ".env",
     ],
+    "force_include": [], # Files/paths to force include even if in exclude_paths
     "include_extensions": [], # Empty list means include all
     "anonymize": {}, # e.g., {"YourName": "Contributor A"}
 }
@@ -73,6 +74,12 @@ def load_config(config_path: Optional[str] = None, start_dir: str = '.') -> Dict
         final_config['exclude_paths'] = list(set(final_config['exclude_paths'] + exclude_paths))
     elif exclude_paths is not None:
          print(f"Warning: 'exclude_paths' in config is not a list. Ignoring.")
+
+    force_include = loaded_config.get('force_include')
+    if isinstance(force_include, list):
+        final_config['force_include'] = force_include
+    elif force_include is not None:
+         print(f"Warning: 'force_include' in config is not a list. Ignoring.")
 
     include_extensions = loaded_config.get('include_extensions')
     if isinstance(include_extensions, list):
